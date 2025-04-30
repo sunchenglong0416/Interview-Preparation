@@ -63,109 +63,108 @@ Java 的 AQS（AbstractQueuedSynchronizer）是 Java 并发包（java.util.concu
 - 通过重写 tryAcquire、tryRelease、tryAcquireShared 和 tryReleaseShared 方法来实现读写锁的逻辑。
 4. AQS 的工作原理
    AQS 的核心是通过一个 FIFO 的等待队列来管理等待获取锁的线程。具体工作原理如下：
-   1.**获取锁**：
+*  1.**获取锁**：
 - **尝试获取锁**：线程调用 acquire 或 acquireShared 方法尝试获取锁。
 - **成功**：如果锁可用，线程立即获取锁。
 - **失败**：如果锁不可用，线程被封装成一个 Node 对象并加入等待队列。
 - **阻塞**：线程进入阻塞状态，等待被唤醒。
-  2.**释放锁**：
+*  2.**释放锁**：
 - **释放锁**：线程调用 release 或 releaseShared 方法释放锁。
 - **唤醒线程**：释放锁后，等待队列中的一个线程被唤醒并尝试获取锁。
 - **状态更新**：同步状态（state）被更新。
-  3.**条件变量**：
+*  3.**条件变量**：
 - **等待**：线程调用 Condition 的 await 方法进入等待状态。
 - **唤醒**：线程调用 Condition 的 signal 或 signalAll 方法唤醒等待的线程。
-5. 示例代码
-   以下是一个简单的 ReentrantLock 实现示例，展示了如何继承 AQS 并实现独占式锁的逻辑：
-   import java.util.concurrent.locks.AbstractQueuedSynchronizer;
+  5. 示例代码
+     以下是一个简单的 ReentrantLock 实现示例，展示了如何继承 AQS 并实现独占式锁的逻辑：
+  ~~~ java
+     import java.util.concurrent.locks.AbstractQueuedSynchronizer;
+      public class SimpleReentrantLock {
+      private final Sync sync = new Sync();
+      private static class Sync extends AbstractQueuedSynchronizer {
+          // 尝试获取锁
+          protected boolean tryAcquire(int acquires) {
+              final Thread current = Thread.currentThread();
+              int c = getState();
+              if (c == 0) {
+                  if (compareAndSetState(0, acquires)) {
+                      setExclusiveOwnerThread(current);
+                      return true;
+                  }
+              } else if (current == getExclusiveOwnerThread()) {
+                  int nextc = c + acquires;
+                  setState(nextc);
+                  return true;
+              }
+              return false;
+          }
 
-public class SimpleReentrantLock {
-private final Sync sync = new Sync();
+          // 尝试释放锁
+          protected boolean tryRelease(int releases) {
+              int c = getState() - releases;
+              if (Thread.currentThread() != getExclusiveOwnerThread()) {
+                  throw new IllegalMonitorStateException();
+              }
+              boolean free = false;
+              if (c == 0) {
+                  free = true;
+                  setExclusiveOwnerThread(null);
+              }
+              setState(c);
+              return free;
+          }
 
-    private static class Sync extends AbstractQueuedSynchronizer {
-        // 尝试获取锁
-        protected boolean tryAcquire(int acquires) {
-            final Thread current = Thread.currentThread();
-            int c = getState();
-            if (c == 0) {
-                if (compareAndSetState(0, acquires)) {
-                    setExclusiveOwnerThread(current);
-                    return true;
-                }
-            } else if (current == getExclusiveOwnerThread()) {
-                int nextc = c + acquires;
-                setState(nextc);
-                return true;
-            }
-            return false;
-        }
+          // 是否持有独占锁
+          protected boolean isHeldExclusively() {
+              return getExclusiveOwnerThread() == Thread.currentThread();
+          }
 
-        // 尝试释放锁
-        protected boolean tryRelease(int releases) {
-            int c = getState() - releases;
-            if (Thread.currentThread() != getExclusiveOwnerThread()) {
-                throw new IllegalMonitorStateException();
-            }
-            boolean free = false;
-            if (c == 0) {
-                free = true;
-                setExclusiveOwnerThread(null);
-            }
-            setState(c);
-            return free;
-        }
+          // 创建条件变量
+          final ConditionObject newCondition() {
+              return new ConditionObject();
+          }
+      }
 
-        // 是否持有独占锁
-        protected boolean isHeldExclusively() {
-            return getExclusiveOwnerThread() == Thread.currentThread();
-        }
+      public void lock() {
+          sync.acquire(1);
+      }
 
-        // 创建条件变量
-        final ConditionObject newCondition() {
-            return new ConditionObject();
-        }
-    }
+      public boolean tryLock() {
+          return sync.tryAcquire(1);
+      }
 
-    public void lock() {
-        sync.acquire(1);
-    }
+      public void unlock() {
+          sync.release(1);
+      }
 
-    public boolean tryLock() {
-        return sync.tryAcquire(1);
-    }
+      public Condition newCondition() {
+          return sync.newCondition();
+      }
 
-    public void unlock() {
-        sync.release(1);
-    }
+      public static void main(String[] args) {
+          SimpleReentrantLock lock = new SimpleReentrantLock();
 
-    public Condition newCondition() {
-        return sync.newCondition();
-    }
+          Runnable task = () -> {
+              lock.lock();
+              try {
+                  System.out.println(Thread.currentThread().getName() + " acquired the lock");
+                  Thread.sleep(1000);
+              } catch (InterruptedException e) {
+                  Thread.currentThread().interrupt();
+              } finally {
+                  lock.unlock();
+                  System.out.println(Thread.currentThread().getName() + " released the lock");
+              }
+          };
 
-    public static void main(String[] args) {
-        SimpleReentrantLock lock = new SimpleReentrantLock();
+          Thread t1 = new Thread(task, "Thread-1");
+          Thread t2 = new Thread(task, "Thread-2");
 
-        Runnable task = () -> {
-            lock.lock();
-            try {
-                System.out.println(Thread.currentThread().getName() + " acquired the lock");
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            } finally {
-                lock.unlock();
-                System.out.println(Thread.currentThread().getName() + " released the lock");
-            }
-        };
-
-        Thread t1 = new Thread(task, "Thread-1");
-        Thread t2 = new Thread(task, "Thread-2");
-
-        t1.start();
-        t2.start();
-    }
-}
-
+          t1.start();
+          t2.start();
+      }
+  }
+  ~~~
 总结
 - **AQS**：AbstractQueuedSynchronizer 是 Java 并发包中的核心框架，用于构建各种同步器。
 - **主要方法**：提供了获取锁、释放锁、共享式获取锁、释放共享锁和条件变量的方法。

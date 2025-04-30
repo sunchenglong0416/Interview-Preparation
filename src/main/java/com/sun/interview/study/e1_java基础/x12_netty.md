@@ -3,6 +3,7 @@
 ## b.Netty对TCP和UDP进行了高度封装，同时保留了底层API的直接使用
 ## c.Netty屏蔽了底层通信协议开发的复杂性，提供了简单易用的API可供开发者专注于业务逻辑
 ## d.最流行的NIO框架，许多开元组件的底层RPC都是使用的Netty，如Dubbo，ES等
+## 3.Spring Cloud Gateway 基于 Spring WebFlux 构建，而 Spring WebFlux 默认使用 Netty 作为服务器。 
 # 2.特性
 ## a.设计方面
     i.对各种传输协议提供统一的API  根据参数来区分

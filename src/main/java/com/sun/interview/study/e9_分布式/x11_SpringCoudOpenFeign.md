@@ -1,5 +1,7 @@
 1. OpenFeign 介绍
-   Spring Cloud OpenFeign 是 Spring Cloud 提供的一个声明式、模板化的 HTTP 客户端，它基于 Netflix Feign 进行了扩展，简化了开发人员编写 HTTP 客户端的过程。借助 OpenFeign，开发人员可以通过定义接口和注解的方式来实现对远程服务的调用，就像调用本地方法一样简单，同时还支持负载均衡、熔断等功能。
+   Spring Cloud OpenFeign 是 Spring Cloud 提供的一个声明式、模板化的 HTTP 客户端 ，它基于 Netflix Feign 进行了扩展，简化了开发人员编写 HTTP 客户端的过程。
+   借助 OpenFeign，开发人员可以通过定义接口和注解的方式来实现对远程服务的调用
+   ，就像调用本地方法一样简单，同时还支持负载均衡、熔断等功能。
 ### 使用示例
 #### 1. 添加依赖
 在 `pom.xml` 中添加 Spring Cloud OpenFeign 的依赖：
